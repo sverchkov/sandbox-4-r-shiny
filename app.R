@@ -1,3 +1,4 @@
+library(tidyverse)
 library(shiny)
 library(shinydashboard)
 library(shinymanager)
@@ -27,7 +28,25 @@ ui <- dashboardPage(
             box(
                 title = "Auth",
                 verbatimTextOutput("auth_output")
+            ),
+
+            box(
+                title = "Data",
+                dataTableOutput("table_view")
+            ),
+
+            box(
+                title = "Select",
+                selectizeInput(
+                    "pet_select",
+                    "Select the pet",
+                    choices = NULL)
+            ),
+
+            box(
+                verbatimTextOutput("selected_text")
             )
+
         )
     )
 )
@@ -44,6 +63,19 @@ server <- function(input, output, session) {
         reactiveValuesToList(res_auth)
     })
 
+    data_thing <- tibble(
+        date = as.Date(c("1999-01-01", "2024-05-04", "2020-06-01")),
+        pet = c("dog", "cat", "snake"),
+        count = c(3, 12, 98)
+    )
+
+    data_filtered <- reactive({
+        if (reactiveValuesToList(res_auth)$user == "shiny"){
+            data_thing %>% filter(pet != "dog")
+        } else {
+            data_thing
+        }
+    })
 
     set.seed(122)
     histdata <- rnorm(500)
@@ -52,6 +84,24 @@ server <- function(input, output, session) {
         data <- histdata[seq_len(input$slider)]
         hist(data)
     })
+
+    output$table_view <- renderDataTable(data_filtered())
+
+    output$session_output <- renderPrint({
+        session
+    })
+
+    observe(
+        if (!is.null(reactiveValuesToList(res_auth)$user)) {
+            updateSelectizeInput(
+                session,
+                "pet_select",
+                choices = data_filtered()$pet,
+                server = TRUE)
+        }
+    )
+
+    output$selected_text <- renderPrint(input$pet_select)
 }
 
 shinyApp(ui, server)
