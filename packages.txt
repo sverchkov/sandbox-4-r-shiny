@@ -1,0 +1,4 @@
+tidyverse
+shiny
+shinydashboard
+shinymanager
